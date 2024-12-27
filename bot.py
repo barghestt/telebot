@@ -24,7 +24,8 @@ def check_message(update: Update, context: CallbackContext) -> None:
 # Основной код
 if __name__ == "__main__":
     # Вставьте свой токен бота
-    TOKEN = "YOUR_BOT_TOKEN"
+    import os
+    TOKEN = os.getenv("7644372092:AAH_w8xAu-euH9VzmdJp7hw4pzpL9PM7S70")
 
     updater = Updater(TOKEN)
 
