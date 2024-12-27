@@ -72,7 +72,7 @@ async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 if __name__ == "__main__":
     # Вставьте свой токен бота
     
-    TOKEN = "7644372092:AAH_w8xAu-euH9VzmdJp7hw4pzpL9PM7S70"
+    TOKEN = "8154721393:AAF2IG0NwZ9YeW7eYzzH-tUY6CEYM-z9VLg"
 
     # Создаём приложение
     application = Application.builder().token(TOKEN).build()
