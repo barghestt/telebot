@@ -53,7 +53,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
         "Привет! Я слежу за порядком в группе и удаляю сообщения с матом."
     )
-        from telegram.helpers import escape_markdown
+from telegram.helpers import escape_markdown
 # Функция для проверки сообщений
 async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
