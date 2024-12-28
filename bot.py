@@ -60,7 +60,7 @@ async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         # Получаем данные пользователя
         user = update.message.from_user
         from telegram.helpers import escape_markdown
-	user_name = escape_markdown(user.first_name, version=2)
+        user_name = escape_markdown(user.first_name, version=2)
         user_link = f"[{user_name}](tg://user?id={user.id})"  # Ссылка на профиль пользователя
 
         # Проверяем текст сообщения
