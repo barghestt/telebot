@@ -56,16 +56,28 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 # Функция для проверки сообщений
 async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    message_text = update.message.text.lower()
-    for bad_word in BAD_WORDS:
-        if bad_word in message_text:
-            # Отправляем предупреждение до удаления
-            await update.message.reply_text(
-                f"{update.message.from_user.first_name}, пожалуйста, не используй мат!"
-            )
-            # Удаляем сообщение
-            await update.message.delete()
-            break
+    try:
+        # Получаем данные пользователя
+        user = update.message.from_user
+        from telegram.helpers import escape_markdown
+	user_name = escape_markdown(user.first_name, version=2)
+        user_link = f"[{user_name}](tg://user?id={user.id})"  # Ссылка на профиль пользователя
+
+        # Проверяем текст сообщения
+        message_text = update.message.text.lower()
+        for bad_word in BAD_WORDS:
+            if bad_word in message_text:
+                # Отправляем предупреждение с ссылкой
+                await update.message.reply_text(
+                    f"{user_link}, пожалуйста, не используй мат!",
+                    parse_mode="MarkdownV2"  # Указываем, что используем Markdown
+                )
+                # Удаляем сообщение
+                await update.message.delete()
+                break
+    except Exception as e:
+        logger.error(f"Ошибка в check_message: {e}")
+
 
 # Основной код
 if __name__ == "__main__":
