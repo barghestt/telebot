@@ -1,7 +1,6 @@
 import logging
 from telegram.helpers import escape_markdown
 from telegram import Update
-from telegram.constants import ParseMode
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 import os
 import re
@@ -27,11 +26,15 @@ async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     
     # Проверяем, есть ли плохие слова в сообщении
     if pattern.search(message_text):
-        # Отправляем предупреждение в тот же чат
+        # Отправляем предупреждение в ту же тему
         warning_message = f"{update.message.from_user.first_name}, пожалуйста, не используй мат!"
         
-        # Отправляем предупреждение в чат
-        await update.message.chat.send_message(warning_message)
+        # Используем chat_id и message_thread_id для отправки в нужную тему
+        await context.bot.send_message(
+            chat_id=update.message.chat.id,
+            text=warning_message,
+            message_thread_id=update.message.message_thread_id  # Указываем ID темы
+        )
         
         # Удаляем сообщение
         await update.message.delete()
