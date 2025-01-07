@@ -28,7 +28,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 if __name__ == "__main__":
     # Получение токена и URL из переменных окружения
     TOKEN = os.getenv("TELEGRAM_TOKEN")
-    WEBHOOK_URL = os.getenv("https://telebot-e8cj.onrender.com")  # Например, https://your-app.onrender.com
+    WEBHOOK_URL = os.getenv("WEB_URL")  # Например, https://your-app.onrender.com
 
     # Создание приложения
     app = ApplicationBuilder().token(TOKEN).build()
