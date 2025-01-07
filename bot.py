@@ -1,18 +1,24 @@
+import logging
+from telegram.helpers import escape_markdown
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 import os
 import re
-from telegram.helpers import escape_markdown
 
 # Список слов, которые считаются матом
 BAD_WORDS = ["падла", "бля", "хуй"]
+
+# Настройка логирования
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Проверка наличия мата в сообщении
 def contains_bad_words(text):
     pattern = re.compile(r"|".join(re.escape(word) for word in BAD_WORDS), re.IGNORECASE)
     return bool(pattern.search(text))
 
+# Функция для удаления сообщений с матом и отправки предупреждения
 async def filter_bad_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message and update.message.text:
         if contains_bad_words(update.message.text):
@@ -26,7 +32,7 @@ async def filter_bad_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
             try:
                 # Удаляем сообщение
                 await update.message.delete()
-                print(f"Удалено сообщение от {user.username or user.full_name}: {update.message.text}")
+                logger.info(f"Удалено сообщение от {user.username or user.full_name}: {update.message.text}")
                 
                 # Отправляем предупреждение
                 warning_message = f"Пожалуйста, {user_mention}, не используйте нецензурную лексику!"
@@ -36,7 +42,7 @@ async def filter_bad_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     parse_mode=ParseMode.MARKDOWN_V2
                 )
             except Exception as e:
-                print(f"Ошибка при удалении сообщения или отправке предупреждения: {e}")
+                logger.error(f"Ошибка при удалении сообщения или отправке предупреждения: {e}")
 
 # Команда для проверки, что бот работает
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
