@@ -3,6 +3,7 @@ from telegram.constants import ParseMode
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 import os
 import re
+from telegram.helpers import escape_markdown
 
 # Список слов, которые считаются матом
 BAD_WORDS = ["падла", "бля", "хуй"]
@@ -12,7 +13,6 @@ def contains_bad_words(text):
     pattern = re.compile(r"|".join(re.escape(word) for word in BAD_WORDS), re.IGNORECASE)
     return bool(pattern.search(text))
 
-# Функция для удаления сообщений с матом и отправки предупреждения
 async def filter_bad_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message and update.message.text:
         if contains_bad_words(update.message.text):
@@ -20,12 +20,11 @@ async def filter_bad_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user = update.message.from_user
             chat = update.message.chat
             user_id = user.id
-            user_name = user.first_name
+            user_name = escape_markdown(user.first_name, version=2)
             user_mention = f"[{user_name}](tg://user?id={user_id})"
             
             try:
-              
-                 # Удаляем сообщение
+                # Удаляем сообщение
                 await update.message.delete()
                 print(f"Удалено сообщение от {user.username or user.full_name}: {update.message.text}")
                 
