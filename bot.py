@@ -25,6 +25,9 @@ async def filter_bad_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             try:
               
+                 # Удаляем сообщение
+                await update.message.delete()
+                print(f"Удалено сообщение от {user.username or user.full_name}: {update.message.text}")
                 
                 # Отправляем предупреждение
                 warning_message = f"Пожалуйста, {user_mention}, не используйте нецензурную лексику!"
@@ -33,9 +36,6 @@ async def filter_bad_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     text=warning_message,
                     parse_mode=ParseMode.MARKDOWN_V2
                 )
-                  # Удаляем сообщение
-                await update.message.delete()
-                print(f"Удалено сообщение от {user.username or user.full_name}: {update.message.text}")
             except Exception as e:
                 print(f"Ошибка при удалении сообщения или отправке предупреждения: {e}")
 
