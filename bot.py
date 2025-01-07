@@ -1,4 +1,5 @@
-from telegram import Update, ParseMode
+from telegram import Update
+from telegram.constants import ParseMode  # Исправленный импорт
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 import os
 import re
