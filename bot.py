@@ -26,7 +26,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 if __name__ == "__main__":
     # Создайте приложение
-    app = ApplicationBuilder().token("ВАШ_TELEGRAM_TOKEN").build()
+    app = ApplicationBuilder().token("8154721393:AAF2IG0NwZ9YeW7eYzzH-tUY6CEYM-z9VLg").build()
 
     # Обработчики
     app.add_handler(CommandHandler("start", start))
