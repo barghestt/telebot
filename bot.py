@@ -1,22 +1,30 @@
 import logging
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
-from bdw.check import Check  # Импортируем Check из библиотеки bdw
 import os
+import re
+
+# Список слов, которые считаются матом
+BAD_WORDS = ["падла", "бля", "хуй"]
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Создаем фильтр для русского языка
-filter_ru = Check(languages=['ru'])
+# Проверка наличия мата в сообщении
+def contains_bad_words(text):
+    pattern = re.compile(r"|".join(re.escape(word) for word in BAD_WORDS), re.IGNORECASE)
+    return bool(pattern.search(text))
 
 # Функция для проверки сообщений
 async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    message_text = update.message.text
+    message_text = update.message.text.lower()
 
-    # Проверяем сообщение на наличие мата на русском языке
-    if filter_ru.filter_profanity(message_text, language='ru'):
+    # Создаем регулярное выражение для поиска всех плохих слов
+    pattern = re.compile(r'\b(' + '|'.join(map(re.escape, BAD_WORDS)) + r')\b', re.IGNORECASE)
+    
+    # Проверяем, есть ли плохие слова в сообщении
+    if pattern.search(message_text):
         # Получаем имя пользователя и его username
         user_first_name = update.message.from_user.first_name
         user_username = f"@{update.message.from_user.username}" if update.message.from_user.username else ""
