@@ -34,8 +34,11 @@ async def filter_bad_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.delete()
                 logger.info(f"Удалено сообщение от {user.username or user.full_name}: {update.message.text}")
                 
-                # Отправляем предупреждение
+                # Экранируем все специальные символы Markdown
                 warning_message = f"Пожалуйста, {user_mention}, не используйте нецензурную лексику!"
+                warning_message = escape_markdown(warning_message, version=2)  # Экранирование
+
+                # Отправляем предупреждение
                 await context.bot.send_message(
                     chat_id=chat.id,
                     text=warning_message,
