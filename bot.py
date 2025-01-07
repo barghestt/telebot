@@ -27,7 +27,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 if __name__ == "__main__":
     # Получение токена и URL из переменных окружения
-    TOKEN = os.getenv("8154721393:AAFpjtB0ZPWv3N4BuS-i6TM_RI1lVTey9U4")
+    TOKEN = os.getenv("TELEGRAM_TOKEN")
     WEBHOOK_URL = os.getenv("https://api.render.com/deploy/srv-ctna6tdds78s73c2lstg?key=qDgwIuFHs0U")  # Например, https://your-app.onrender.com
 
     # Создание приложения
