@@ -1,19 +1,22 @@
 import logging
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
-from bdw import filter_bad_words  # Импортируем библеотеку
+from bdw import BadWordFilter  # Импортируем класс BadWordFilter
 import os
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Создаем экземпляр фильтра
+bad_word_filter = BadWordFilter()
+
 # Функция для проверки сообщений
 async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message_text = update.message.text
 
     # Проверяем сообщение на наличие мата
-    if filter_bad_words(message_text):
+    if bad_word_filter.contains_bad_words(message_text):
         # Получаем имя пользователя и его username
         user_first_name = update.message.from_user.first_name
         user_username = f"@{update.message.from_user.username}" if update.message.from_user.username else ""
