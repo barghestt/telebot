@@ -18,38 +18,22 @@ def contains_bad_words(text):
     pattern = re.compile(r"|".join(re.escape(word) for word in BAD_WORDS), re.IGNORECASE)
     return bool(pattern.search(text))
 
-# Функция для удаления сообщений с матом и отправки предупреждения
-async def filter_bad_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message and update.message.text:
-        if contains_bad_words(update.message.text):
-            # Сохраняем необходимые данные
-            user = update.message.from_user
-            chat = update.message.chat
-            user_id = user.id
-            user_name = escape_markdown(user.first_name, version=2)  # Экранируем имя
-            
-            # Формируем ссылку на личные сообщения
-            user_mention = f"[{user_name}](tg://user?id={user_id})"
-            
-            try:
-                # Удаляем сообщение
-                await update.message.delete()
-                logger.info(f"Удалено сообщение от {user.username or user.full_name}: {update.message.text}")
-                
-                # Формируем предупреждение
-                warning_message = f"Пожалуйста, {user_mention}, не используйте нецензурную лексику!"
-                
-                # Экранируем всё предупреждение, чтобы избежать ошибок Markdown
-                warning_message = escape_markdown(warning_message, version=2)
+# Функция для проверки сообщений
+async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message_text = update.message.text.lower()
 
-                # Отправляем предупреждение в тот же чат, откуда пришло сообщение
-                await context.bot.send_message(
-                    chat_id=chat.id,  # Используем тот же чат, откуда пришло сообщение
-                    text=warning_message,
-                    parse_mode=ParseMode.MARKDOWN_V2  # Используем Markdown для ссылки
-                )
-            except Exception as e:
-                logger.error(f"Ошибка при удалении сообщения или отправке предупреждения: {e}")
+    # Создаем регулярное выражение для поиска всех плохих слов
+    pattern = re.compile(r'\b(' + '|'.join(map(re.escape, BAD_WORDS)) + r')\b', re.IGNORECASE)
+    
+    # Проверяем, есть ли плохие слова в сообщении
+    if pattern.search(message_text):
+        # Отправляем предупреждение
+        await update.message.reply_text(
+            f"{update.message.from_user.first_name}, пожалуйста, не используй мат!"
+        )
+        
+        # Удаляем сообщение
+        await update.message.delete()
 
 # Команда для проверки, что бот работает
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
