@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
     # Обработчики
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, filter_bad_words))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))  # Используем check_message
 
     # Установка Webhook
     app.run_webhook(
