@@ -1,4 +1,4 @@
-from telegram import Update
+from telegram import Update, ParseMode
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 import os
 import re
@@ -11,15 +11,26 @@ def contains_bad_words(text):
     pattern = re.compile(r"|".join(re.escape(word) for word in BAD_WORDS), re.IGNORECASE)
     return bool(pattern.search(text))
 
-# Функция для удаления сообщений с матом
+# Функция для удаления сообщений с матом и отправки предупреждения
 async def filter_bad_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message and update.message.text:
         if contains_bad_words(update.message.text):
+            user = update.message.from_user
             try:
+                # Удаляем сообщение
                 await update.message.delete()
-                print(f"Удалено сообщение от {update.message.from_user.username}: {update.message.text}")
+                print(f"Удалено сообщение от {user.username or user.full_name}: {update.message.text}")
+
+                # Формируем ссылку на профиль
+                user_mention = f"[{user.first_name}](tg://user?id={user.id})"
+                
+                # Отправляем предупреждение
+                await update.message.reply_text(
+                    f"Пожалуйста, {user_mention}, не используйте нецензурную лексику!",
+                    parse_mode=ParseMode.MARKDOWN_V2
+                )
             except Exception as e:
-                print(f"Не удалось удалить сообщение: {e}")
+                print(f"Не удалось удалить сообщение или отправить предупреждение: {e}")
 
 # Команда для проверки, что бот работает
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
