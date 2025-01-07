@@ -1,101 +1,37 @@
-import os
 from telegram import Update
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    MessageHandler,
-    ContextTypes,
-    filters,
-)
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+import re
 
-# Список запрещённых слов (можно дополнять)
-BAD_WORDS = [
-    "хер",
-    "жопа",
-    "дурак",
-    "тупой",
-    "глупый",
-    "блин",
-    "черт",
-    "задница",
-    "идиот",
-    "скотина",
-    "урод",
-    "сволочь",
-    "дрянь",
-    "ублюдок",
-    "подонок",
-    "козел",
-    "сучка",
-    "падла",
-    "паразит",
-    "тварь",
-    "шалава",
-    "проститутка",
-    "мудак",
-    "гнида",
-    "засранец",
-    "обормот",
-    "выдра",
-    "мразь",
-    "говнюк",
-    "дерьмо",
-    "сука",
-    "блядь",  # В виде цензуры
-    "пиздец",  # В виде цензуры
-    "ебать",
-    "пидор",
-    "хуй"
-]
+# Список слов, которые считаются матом (можно расширить)
+BAD_WORDS = ["плохое слово1", "плохое слово2", "плохое слово3"]
 
-# Функция для старта бота
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text(
-        "Привет! Я слежу за порядком в группе и удаляю сообщения с матом."
-    )
-from telegram.helpers import escape_markdown
-# Функция для проверки сообщений
-async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    try:
-        user = update.message.from_user
-        # Экранируем имя пользователя для MarkdownV2
-        user_name = escape_markdown(user.first_name, version=2)
-        user_link = f"[{user_name}](tg://user?id={user.id})"
+# Проверка наличия мата в сообщении
+def contains_bad_words(text):
+    pattern = re.compile(r"|".join(re.escape(word) for word in BAD_WORDS), re.IGNORECASE)
+    return bool(pattern.search(text))
 
-        message_text = update.message.text.lower()
-        for bad_word in BAD_WORDS:
-            if bad_word in message_text:
-                await update.message.reply_text(
-                    f"{user_link}, пожалуйста, не используй мат!",
-                    parse_mode="MarkdownV2"
-                )
+# Функция для удаления сообщений с матом
+async def filter_bad_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message and update.message.text:
+        if contains_bad_words(update.message.text):
+            try:
                 await update.message.delete()
-                break
-    except Exception as e:
-        print(f"Ошибка: {e}")
+                print(f"Удалено сообщение от {update.message.from_user.username}: {update.message.text}")
+            except Exception as e:
+                print(f"Не удалось удалить сообщение: {e}")
 
+# Команда для проверки, что бот работает
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Бот запущен и работает! Добавьте меня администратором в группу.")
 
-# Основной код
 if __name__ == "__main__":
-    # Вставьте свой токен бота
-    TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8154721393:AAF2IG0NwZ9YeW7eYzzH-tUY6CEYM-z9VLg")  # Лучше использовать переменные окружения
+    # Создайте приложение
+    app = ApplicationBuilder().token("ВАШ_TELEGRAM_TOKEN").build()
 
-    # Получаем порт из переменной окружения
-    PORT = int(os.getenv("PORT", 8443))
+    # Обработчики
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, filter_bad_words))
 
-    # Создаём приложение
-    application = Application.builder().token(TOKEN).build()
-
-    # Команда /start
-    application.add_handler(CommandHandler("start", start))
-
-    # Обработка всех текстовых сообщений
-    # application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
-    application.add_handler(MessageHandler(filters.ALL, check_message))
-    # Устанавливаем Webhook
-    WEBHOOK_URL = f"https://telebot-e8cj.onrender.com"
-    application.run_webhook(
-        listen="0.0.0.0",  # Прослушиваем все подключения
-        port=PORT,        # Используем порт из Render
-        webhook_url=WEBHOOK_URL  # URL Webhook
-    )
+    # Запуск бота
+    print("Бот запущен!")
+    app.run_polling()
