@@ -42,9 +42,9 @@ async def filter_bad_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # Экранируем всё предупреждение, чтобы избежать ошибок Markdown
                 warning_message = escape_markdown(warning_message, version=2)
 
-                # Отправляем предупреждение
+                # Отправляем предупреждение в тот же чат, откуда пришло сообщение
                 await context.bot.send_message(
-                    chat_id=chat.id,
+                    chat_id=chat.id,  # Используем тот же чат, откуда пришло сообщение
                     text=warning_message,
                     parse_mode=ParseMode.MARKDOWN_V2  # Используем Markdown для ссылки
                 )
