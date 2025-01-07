@@ -1,6 +1,7 @@
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.helpers import escape_markdown  # Добавляем функцию экранирования
 import os
 import re
 
@@ -16,26 +17,25 @@ def contains_bad_words(text):
 async def filter_bad_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message and update.message.text:
         if contains_bad_words(update.message.text):
-            # Сохраняем необходимые данные
             user = update.message.from_user
             chat = update.message.chat
             user_id = user.id
-            user_name = user.first_name
-            user_mention = f"[{user_name}](tg://user?id={user_id})"
+            user_name = escape_markdown(user.first_name or "Пользователь", version=2)  # Экранируем имя
+            user_mention = f"[{user_name}](tg://user?id={user_id})"  # Ссылка на профиль
             
             try:
-              
-                 # Удаляем сообщение
-                await update.message.delete()
-                print(f"Удалено сообщение от {user.username or user.full_name}: {update.message.text}")
-                
-                # Отправляем предупреждение
+                # Отправляем предупреждение (перенесли перед удалением)
                 warning_message = f"Пожалуйста, {user_mention}, не используйте нецензурную лексику!"
                 await context.bot.send_message(
                     chat_id=chat.id,
                     text=warning_message,
                     parse_mode=ParseMode.MARKDOWN_V2
                 )
+
+                # Удаляем сообщение
+                await update.message.delete()
+                print(f"Удалено сообщение от {user.username or user.full_name}: {update.message.text}")
+
             except Exception as e:
                 print(f"Ошибка при удалении сообщения или отправке предупреждения: {e}")
 
