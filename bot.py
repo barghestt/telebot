@@ -27,10 +27,11 @@ async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     
     # Проверяем, есть ли плохие слова в сообщении
     if pattern.search(message_text):
-        # Отправляем предупреждение
-        await update.message.reply_text(
-            f"{update.message.from_user.first_name}, пожалуйста, не используй мат!"
-        )
+        # Отправляем предупреждение в тот же чат
+        warning_message = f"{update.message.from_user.first_name}, пожалуйста, не используй мат!"
+        
+        # Отправляем предупреждение в чат
+        await update.message.chat.send_message(warning_message)
         
         # Удаляем сообщение
         await update.message.delete()
