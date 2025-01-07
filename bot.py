@@ -16,25 +16,23 @@ def contains_bad_words(text):
 async def filter_bad_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message and update.message.text:
         if contains_bad_words(update.message.text):
-            user = update.message.from_user
+            user = update.message.from_user  # Сохраняем информацию о пользователе
+            chat = update.message.chat  # Сохраняем информацию о чате
+            user_mention = f"[{user.first_name}](tg://user?id={user.id})"  # Формируем ссылку на профиль
+            
             try:
                 # Удаляем сообщение
                 await update.message.delete()
                 print(f"Удалено сообщение от {user.username or user.full_name}: {update.message.text}")
-
-                # Формируем ссылку на профиль
-                user_mention = f"[{user.first_name}](tg://user?id={user.id})"
-                
-                # Форматируем сообщение с экранированием символов для MarkdownV2
-                warning_message = f"Пожалуйста, {user_mention}, не используйте нецензурную лексику!"
                 
                 # Отправляем предупреждение
-                await update.message.chat.send_message(
+                warning_message = f"Пожалуйста, {user_mention}, не используйте нецензурную лексику!"
+                await chat.send_message(
                     text=warning_message,
                     parse_mode=ParseMode.MARKDOWN_V2
                 )
             except Exception as e:
-                print(f"Ошибка при отправке предупреждения: {e}")
+                print(f"Ошибка при удалении сообщения или отправке предупреждения: {e}")
 
 # Команда для проверки, что бот работает
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
