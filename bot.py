@@ -90,8 +90,8 @@ if __name__ == "__main__":
     application.add_handler(CommandHandler("start", start))
 
     # Обработка всех текстовых сообщений
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
-
+    # application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
+    application.add_handler(MessageHandler(filters.ALL, check_message))
     # Устанавливаем Webhook
     WEBHOOK_URL = f"https://telebot-e8cj.onrender.com"
     application.run_webhook(
