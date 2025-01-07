@@ -1,22 +1,19 @@
 import logging
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
-from obscene_word_filter import ObsceneWordFilter  # Импортируем библиотеку
+from bdw import filter_bad_words  # Импортируем библеотеку
 import os
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Инициализируем фильтр мата
-obscene_filter = ObsceneWordFilter()
-
 # Функция для проверки сообщений
 async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message_text = update.message.text
 
     # Проверяем сообщение на наличие мата
-    if obscene_filter.has_obscene_words(message_text):
+    if filter_bad_words(message_text):
         # Получаем имя пользователя и его username
         user_first_name = update.message.from_user.first_name
         user_username = f"@{update.message.from_user.username}" if update.message.from_user.username else ""
