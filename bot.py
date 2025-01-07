@@ -1,22 +1,22 @@
 import logging
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
-from bdw import BadWordFilter  # Импортируем класс BadWordFilter
+from bdw.check import Check  # Импортируем Check из библиотеки bdw
 import os
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Создаем экземпляр фильтра
-bad_word_filter = BadWordFilter()
+# Создаем фильтр для русского языка
+filter_ru = Check(languages=['ru'])
 
 # Функция для проверки сообщений
 async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message_text = update.message.text
 
-    # Проверяем сообщение на наличие мата
-    if bad_word_filter.contains_bad_words(message_text):
+    # Проверяем сообщение на наличие мата на русском языке
+    if filter_ru.filter_profanity(message_text, language='ru'):
         # Получаем имя пользователя и его username
         user_first_name = update.message.from_user.first_name
         user_username = f"@{update.message.from_user.username}" if update.message.from_user.username else ""
