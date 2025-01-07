@@ -1,8 +1,9 @@
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+import os
 import re
 
-# Список слов, которые считаются матом (можно расширить)
+# Список слов, которые считаются матом
 BAD_WORDS = ["плохое слово1", "плохое слово2", "плохое слово3"]
 
 # Проверка наличия мата в сообщении
@@ -25,13 +26,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Бот запущен и работает! Добавьте меня администратором в группу.")
 
 if __name__ == "__main__":
-    # Создайте приложение
-    app = ApplicationBuilder().token("8154721393:AAF2IG0NwZ9YeW7eYzzH-tUY6CEYM-z9VLg").build()
+    # Получение токена и URL из переменных окружения
+    TOKEN = os.getenv("8154721393:AAF2IG0NwZ9YeW7eYzzH-tUY6CEYM-z9VLg")
+    WEBHOOK_URL = os.getenv("https://api.render.com/deploy/srv-ctna6tdds78s73c2lstg?key=qDgwIuFHs0U")  # Например, https://your-app.onrender.com
+
+    # Создание приложения
+    app = ApplicationBuilder().token(TOKEN).build()
 
     # Обработчики
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, filter_bad_words))
 
-    # Запуск бота
-    print("Бот запущен!")
-    app.run_polling()
+    # Установка Webhook
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=int(os.getenv("PORT", 8443)),
+        webhook_url=WEBHOOK_URL
+    )
