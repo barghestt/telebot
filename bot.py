@@ -1,5 +1,5 @@
 from telegram import Update
-from telegram.constants import ParseMode  # Импорт ParseMode
+from telegram.constants import ParseMode
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 import os
 import re
@@ -16,9 +16,12 @@ def contains_bad_words(text):
 async def filter_bad_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message and update.message.text:
         if contains_bad_words(update.message.text):
-            user = update.message.from_user  # Сохраняем информацию о пользователе
-            chat = update.message.chat  # Сохраняем информацию о чате
-            user_mention = f"[{user.first_name}](tg://user?id={user.id})"  # Формируем ссылку на профиль
+            # Сохраняем необходимые данные
+            user = update.message.from_user
+            chat = update.message.chat
+            user_id = user.id
+            user_name = user.first_name
+            user_mention = f"[{user_name}](tg://user?id={user_id})"
             
             try:
                 # Удаляем сообщение
@@ -27,7 +30,8 @@ async def filter_bad_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 
                 # Отправляем предупреждение
                 warning_message = f"Пожалуйста, {user_mention}, не используйте нецензурную лексику!"
-                await chat.send_message(
+                await context.bot.send_message(
+                    chat_id=chat.id,
                     text=warning_message,
                     parse_mode=ParseMode.MARKDOWN_V2
                 )
