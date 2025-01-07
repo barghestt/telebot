@@ -26,7 +26,9 @@ async def filter_bad_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user = update.message.from_user
             chat = update.message.chat
             user_id = user.id
-            user_name = escape_markdown(user.first_name, version=2)
+            user_name = escape_markdown(user.first_name, version=2)  # Экранируем имя
+            
+            # Формируем ссылку на личные сообщения
             user_mention = f"[{user_name}](tg://user?id={user_id})"
             
             try:
@@ -34,15 +36,14 @@ async def filter_bad_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.delete()
                 logger.info(f"Удалено сообщение от {user.username or user.full_name}: {update.message.text}")
                 
-                # Экранируем все специальные символы Markdown
+                # Отправляем предупреждение с правильной ссылкой
                 warning_message = f"Пожалуйста, {user_mention}, не используйте нецензурную лексику!"
-                warning_message = escape_markdown(warning_message, version=2)  # Экранирование
-
+                
                 # Отправляем предупреждение
                 await context.bot.send_message(
                     chat_id=chat.id,
                     text=warning_message,
-                    parse_mode=ParseMode.MARKDOWN_V2
+                    parse_mode=ParseMode.MARKDOWN_V2  # Используем Markdown для ссылки
                 )
             except Exception as e:
                 logger.error(f"Ошибка при удалении сообщения или отправке предупреждения: {e}")
