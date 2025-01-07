@@ -1,5 +1,5 @@
 from telegram import Update
-from telegram.constants import ParseMode  # Исправленный импорт
+from telegram.constants import ParseMode  # Импорт ParseMode
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 import os
 import re
@@ -25,13 +25,16 @@ async def filter_bad_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # Формируем ссылку на профиль
                 user_mention = f"[{user.first_name}](tg://user?id={user.id})"
                 
+                # Форматируем сообщение с экранированием символов для MarkdownV2
+                warning_message = f"Пожалуйста, {user_mention}, не используйте нецензурную лексику!"
+                
                 # Отправляем предупреждение
-                await update.message.reply_text(
-                    f"Пожалуйста, {user_mention}, не используйте нецензурную лексику!",
+                await update.message.chat.send_message(
+                    text=warning_message,
                     parse_mode=ParseMode.MARKDOWN_V2
                 )
             except Exception as e:
-                print(f"Не удалось удалить сообщение или отправить предупреждение: {e}")
+                print(f"Ошибка при отправке предупреждения: {e}")
 
 # Команда для проверки, что бот работает
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
