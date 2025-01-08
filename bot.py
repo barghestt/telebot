@@ -23,7 +23,8 @@ BAD_WORD_PATTERN = re.compile(r'\b(' + '|'.join(map(re.escape, BAD_WORDS)) + r')
 # Функция для обработки команды /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_first_name = update.message.from_user.first_name
-    await update.message.reply(f"Привет, {user_first_name}! Я ваш бот для проверки сообщений.")
+    # Используем send_message вместо reply
+    await update.message.chat.send_message(f"Привет, {user_first_name}! Я ваш бот для проверки сообщений.")
 
 # Функция для проверки сообщений на наличие мата
 async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
