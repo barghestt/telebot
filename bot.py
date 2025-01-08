@@ -42,6 +42,7 @@ async def start(update: Update, context: CallbackContext) -> None:
 async def main():
     # Получаем токен
     TOKEN = os.getenv("TELEGRAM_TOKEN")
+    PORT = os.getenv("PORT", 8443)  # Порт, предоставленный сервером
 
     # Создаем приложение
     application = Application.builder().token(TOKEN).build()
@@ -50,11 +51,9 @@ async def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))  # Используем check_message
 
-    # Запуск бота
-    await application.run_polling()
+    # Запуск бота на указанном порту
+    await application.run_polling(port=int(PORT))
 
 if __name__ == "__main__":
-    # Запуск приложения без asyncio.run()
     import asyncio
-    application = Application.builder().token(os.getenv("TELEGRAM_TOKEN")).build()
-    asyncio.create_task(application.run_polling())
+    asyncio.create_task(main())
