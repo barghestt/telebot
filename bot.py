@@ -55,5 +55,6 @@ async def main():
     await application.run_polling(port=int(PORT))
 
 if __name__ == "__main__":
+    # Запускаем основной цикл событий с asyncio
     import asyncio
-    asyncio.create_task(main())
+    asyncio.run(main())
