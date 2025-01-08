@@ -63,9 +63,8 @@ application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_me
 async def telegram_webhook(request: Request):
     """Обрабатываем запросы от Telegram"""
     try:
-        # Гарантируем инициализацию приложения перед обработкой обновлений
-        if not application.ready:
-            await application.initialize()
+        # Инициализируем приложение (гарантированно один раз)
+        await application.initialize()
 
         # Обрабатываем обновления
         data = await request.json()
