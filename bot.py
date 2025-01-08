@@ -1,5 +1,6 @@
 import os
 import re
+from fastapi import FastAPI, Request
 from telegram import Update
 from telegram.ext import (
     Application,
@@ -8,7 +9,6 @@ from telegram.ext import (
     ContextTypes,
     filters,
 )
-from fastapi import FastAPI
 from uvicorn import run
 
 # Создаем FastAPI-приложение
@@ -27,6 +27,12 @@ BAD_WORDS = [
 
 # Предкомпиляция регулярного выражения
 BAD_WORD_PATTERN = re.compile(r'\b(' + '|'.join(map(re.escape, BAD_WORDS)) + r')\b', re.IGNORECASE)
+
+# Создаем Telegram приложение
+TOKEN = os.getenv("TELEGRAM_TOKEN")
+WEBHOOK_URL = os.getenv("WEB_URL")
+
+application = Application.builder().token(TOKEN).build()
 
 # Функция для обработки команды /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -48,26 +54,31 @@ async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         )
         await update.message.delete()
 
-# Маршрут для проверки состояния
+# Добавляем обработчики
+application.add_handler(CommandHandler("start", start))
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
+
+# Создаем эндпоинт вебхука
+@fastapi_app.post("/webhook")
+async def telegram_webhook(request: Request):
+    """Обрабатываем запросы от Telegram"""
+    try:
+        data = await request.json()
+        update = Update.de_json(data, application.bot)
+        await application.process_update(update)
+    except Exception as e:
+        print(f"Ошибка при обработке вебхука: {e}")
+
+# Эндпоинт для проверки состояния
 @fastapi_app.get("/health")
 def health_check():
     return {"status": "ok"}
 
-# Основная функция для запуска бота
+# Основная функция для запуска FastAPI
 if __name__ == "__main__":
-    # Токен и URL для вебхука
-    TOKEN = os.getenv("TELEGRAM_TOKEN")
-    WEBHOOK_URL = os.getenv("WEB_URL")
+    # Устанавливаем вебхук
+    import asyncio
+    asyncio.run(application.bot.set_webhook(WEBHOOK_URL + "/webhook"))
 
-    # Создаем приложение
-    application = Application.builder().token(TOKEN).build()
-
-    # Добавляем обработчики
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
-
-    # Интегрируем FastAPI с Telegram
-    application.updater.use_fastapi(fastapi_app)
-
-    # Запускаем FastAPI сервер
-    run("main:fastapi_app", host="0.0.0.0", port=int(os.getenv("PORT", 8443)), reload=True)
+    # Запускаем FastAPI
+    run("bot:fastapi_app", host="0.0.0.0", port=int(os.getenv("PORT", 8443)), reload=True)
