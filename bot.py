@@ -1,6 +1,6 @@
 import logging
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 import os
 import re
 
@@ -17,7 +17,7 @@ def contains_bad_words(text):
     return bool(pattern.search(text))
 
 # Функция для проверки сообщений
-def check_message(update: Update, context: CallbackContext) -> None:
+async def check_message(update: Update, context: CallbackContext) -> None:
     message_text = update.message.text
 
     # Проверяем сообщение на наличие мата
@@ -30,34 +30,29 @@ def check_message(update: Update, context: CallbackContext) -> None:
         warning_message = f"{user_first_name} {user_username}, пожалуйста, не используй мат!"
         
         # Отправляем предупреждение в ту же тему
-        update.message.reply_text(warning_message)
+        await update.message.reply_text(warning_message)
 
         # Удаляем сообщение
-        update.message.delete()
+        await update.message.delete()
 
 # Команда для проверки, что бот работает
-def start(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text("Бот запущен и работает! Добавьте меня администратором в группу.")
+async def start(update: Update, context: CallbackContext) -> None:
+    await update.message.reply_text("Бот запущен и работает! Добавьте меня администратором в группу.")
 
-def main():
+async def main():
     # Получаем токен
     TOKEN = os.getenv("TELEGRAM_TOKEN")
 
-    # Создаем Updater
-    updater = Updater(TOKEN)
-
-    # Диспетчер для обработки команд
-    dp = updater.dispatcher
+    # Создаем приложение
+    application = Application.builder().token(TOKEN).build()
 
     # Обработчики
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, check_message))  # Используем check_message
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))  # Используем check_message
 
     # Запуск бота
-    updater.start_polling()
-
-    # Ожидание завершения
-    updater.idle()
+    await application.run_polling()
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())
