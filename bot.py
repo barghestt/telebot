@@ -54,5 +54,7 @@ async def main():
     await application.run_polling()
 
 if __name__ == "__main__":
+    # Используем уже существующий цикл событий
+    from telegram.ext import Application
     import asyncio
-    asyncio.run(main())
+    asyncio.get_event_loop().run_until_complete(main())
