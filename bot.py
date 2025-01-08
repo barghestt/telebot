@@ -54,7 +54,7 @@ async def main():
     await application.run_polling()
 
 if __name__ == "__main__":
-    # Используем уже существующий цикл событий
-    from telegram.ext import Application
+    # Запуск приложения без asyncio.run()
     import asyncio
-    asyncio.get_event_loop().run_until_complete(main())
+    application = Application.builder().token(os.getenv("TELEGRAM_TOKEN")).build()
+    asyncio.create_task(application.run_polling())
