@@ -2,6 +2,7 @@ from flask import Flask, request
 from telegram import Update, Bot
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
 import logging
+import os
 
 # Настройка логирования
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -42,7 +43,7 @@ WEBHOOK_URL = os.getenv("WEB_URL")
 bot = Bot(TOKEN)
 
 @app.route('/webhook', methods=['POST'])
-def webhook():
+async def webhook() -> str:
     update = Update.de_json(request.get_json(force=True), bot)
     
     # Создаем приложение и добавляем обработчик
@@ -50,10 +51,12 @@ def webhook():
     application.add_handler(MessageHandler(filters.TEXT | filters.CAPTION, filter_messages))
     
     # Обрабатываем обновление
-    application.update_queue.put(update)
+    async with application:
+        await application.process_update(update)
     
     return 'ok', 200
 
 if __name__ == '__main__':
     # Устанавливаем вебхук
+    bot.set_webhook(url=WEBHOOK_URL)
     app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
