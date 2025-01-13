@@ -1,73 +1,60 @@
-import os
-import re
-from telegram import Update
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    MessageHandler,
-    ContextTypes,
-    filters,
-)
+from flask import Flask, request
+from telegram import Update, Bot
+from telegram.ext import Dispatcher, MessageHandler, Filters, CallbackContext
+import logging
 
-# Список запрещённых слов
-BAD_WORDS = [
-    "хер", "урод", "сволочь", "дрянь", "ублюдок", "сучка", "падла", 
-    "тварь", "шалава", "проститутка", "мудак", "гнида", "мразь", 
-    "говнюк", "сука", "блядь", "бля", "блядский", "блядина", "блядовать",
-    "пизда", "пиздец", "пиздануть", "пиздатый", "пиздеть", "пиздёж", "пиздюк",
-    "ебать", "ебёт", "ебал", "ебанутая", "ебанутый", "ебануться", "ёб",
-    "пидор", "пидорас", "пидорок", "пидорюга", "пидорнуть", "пидорский",
-    "хуй", "хуета", "хуйня", "хули", "хуевый", "хуярить", "хуяк"
+# Настройка логирования
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Список запрещенных слов (матерные слова)
+bad_words = [
+    'матерное_слово_1',
+    'матерное_слово_2',
+    # Добавьте сюда все нужные слова
 ]
 
-# Предкомпиляция регулярного выражения для повышения эффективности
-BAD_WORD_PATTERN = re.compile(r'\b(' + '|'.join(map(re.escape, BAD_WORDS)) + r')\b', re.IGNORECASE)
+# Функция для проверки наличия плохих слов в сообщении
+def contains_bad_words(text):
+    for word in bad_words:
+        if word in text.lower():
+            return True
+    return False
 
-# Функция для обработки команды /start
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_first_name = update.message.from_user.first_name
-    # Используем send_message вместо reply
-    await update.message.chat.send_message(f"Привет, {user_first_name}! Я ваш бот для проверки сообщений.")
+# Обработчик входящих сообщений
+def filter_messages(update: Update, context: CallbackContext) -> None:
+    message = update.message
+    text = message.text or message.caption
+    
+    if text and contains_bad_words(text):
+        message.reply_text("Пожалуйста, не используйте нецензурную лексику в этом канале.")
+        message.delete()
 
-# Функция для проверки сообщений на наличие мата
-async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    message_text = update.message.text.lower()
+# Создаем Flask приложение
+app = Flask(__name__)
 
-    # Проверяем наличие плохих слов с использованием предкомпилированного паттерна
-    if BAD_WORD_PATTERN.search(message_text):
-        user_first_name = update.message.from_user.first_name
-        user_username = f"@{update.message.from_user.username}" if update.message.from_user.username else ""
-        
-        # Отправляем предупреждающее сообщение
-        warning_message = f"{user_first_name} {user_username}, пожалуйста, не используй мат!"
-        await context.bot.send_message(
-            chat_id=update.message.chat.id,
-            text=warning_message,
-            message_thread_id=update.message.message_thread_id
-        )
-        
-        # Удаляем сообщение
-        await update.message.delete()
+# Замените 'YOUR_TOKEN' на ваш токен от BotFather
+TOKEN = os.getenv("TELEGRAM_TOKEN")
 
-# Основная функция для запуска бота
-if __name__ == "__main__":
-    # Токен бота и URL для вебхука
-    TOKEN = os.getenv("TELEGRAM_TOKEN")
-    PORT = int(os.getenv("PORT", 8443))
-    WEBHOOK_URL = os.getenv("WEB_URL")
+# Замените 'YOUR_RENDER_URL' на ваш URL на Render
+WEBHOOK_URL = os.getenv("WEB_URL")
 
-    # Создаем приложение
-    application = Application.builder().token(TOKEN).build()
+bot = Bot(TOKEN)
 
-    # Добавляем обработчик для команды /start
-    application.add_handler(CommandHandler("start", start))
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    update = Update.de_json(request.get_json(force=True), bot)
+    
+    # Создаем диспетчер и добавляем обработчик
+    dispatcher = Dispatcher(bot, None, workers=0, use_context=True)
+    dispatcher.add_handler(MessageHandler(Filters.text | Filters.caption, filter_messages))
+    
+    # Обрабатываем обновление
+    dispatcher.process_update(update)
+    
+    return 'ok', 200
 
-    # Добавляем обработчик для текстовых сообщений
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
-
-    # Запускаем вебхук
-    application.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        webhook_url=WEBHOOK_URL
-    )
+if __name__ == '__main__':
+    # Устанавливаем вебхук
+    bot.set_webhook(url=WEBHOOK_URL)
+    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
