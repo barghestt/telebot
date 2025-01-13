@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
-from telegram import Update, Bot, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters, CommandHandler
+from telegram import Update, Bot
+from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
 import logging
 import threading
 import asyncio
@@ -56,18 +56,18 @@ application.add_handler(CommandHandler("start", start))
 application.add_handler(MessageHandler(filters.TEXT | filters.CAPTION & (~filters.COMMAND), filter_messages))
 
 # Функция для обработки обновлений в отдельном потоке
-def process_update(update):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(application.process_update(update))
-    loop.close()
+async def process_update(update):
+    await application.process_update(update)
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
     update = Update.de_json(request.get_json(force=True), bot)
     
     # Обрабатываем обновление в отдельном потоке
-    threading.Thread(target=process_update, args=(update,)).start()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(process_update(update))
+    loop.close()
     
     return jsonify({"status": "ok"}), 200
 
