@@ -1,8 +1,9 @@
-from flask import Flask, request
-from telegram import Update, Bot
-from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
+from flask import Flask, request, jsonify
+from telegram import Update, Bot, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters, CommandHandler
 import logging
-import os
+import threading
+import asyncio
 
 # Настройка логирования
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -21,6 +22,12 @@ def contains_bad_words(text):
         if word in text.lower():
             return True
     return False
+
+# Обработчик команды /start
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.message.from_user
+    logger.info("User %s started the conversation.", user.first_name)
+    await update.message.reply_text("Бот готов удалять матерные сообщения в вашем канале.")
 
 # Обработчик входящих сообщений
 async def filter_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -42,19 +49,26 @@ WEBHOOK_URL = os.getenv("WEB_URL")
 
 bot = Bot(TOKEN)
 
+# Асинхронное приложение для обработки обновлений
+application = ApplicationBuilder().token(TOKEN).build()
+application.add_handler(CommandHandler("start", start))
+application.add_handler(MessageHandler(filters.TEXT | filters.CAPTION & (~filters.COMMAND), filter_messages))
+
+# Функция для обработки обновлений в отдельном потоке
+def process_update(update):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(application.process_update(update))
+    loop.close()
+
 @app.route('/webhook', methods=['POST'])
-async def webhook() -> str:
+def webhook():
     update = Update.de_json(request.get_json(force=True), bot)
     
-    # Создаем приложение и добавляем обработчик
-    application = ApplicationBuilder().token(TOKEN).build()
-    application.add_handler(MessageHandler(filters.TEXT | filters.CAPTION, filter_messages))
+    # Обрабатываем обновление в отдельном потоке
+    threading.Thread(target=process_update, args=(update,)).start()
     
-    # Обрабатываем обновление
-    async with application:
-        await application.process_update(update)
-    
-    return 'ok', 200
+    return jsonify({"status": "ok"}), 200
 
 if __name__ == '__main__':
     # Устанавливаем вебхук
