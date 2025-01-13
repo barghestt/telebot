@@ -55,6 +55,10 @@ application = ApplicationBuilder().token(TOKEN).build()
 application.add_handler(CommandHandler("start", start))
 application.add_handler(MessageHandler(filters.TEXT | filters.CAPTION & (~filters.COMMAND), filter_messages))
 
+# Инициализация приложения
+async def initialize_application():
+    await application.initialize()
+
 # Функция для обработки обновлений в отдельном потоке
 async def process_update(update):
     await application.process_update(update)
@@ -63,9 +67,12 @@ async def process_update(update):
 def webhook():
     update = Update.de_json(request.get_json(force=True), bot)
     
-    # Обрабатываем обновление в отдельном потоке
+    # Убедимся, что приложение инициализировано
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
+    loop.run_until_complete(initialize_application())
+    
+    # Обрабатываем обновление в отдельном потоке
     loop.run_until_complete(process_update(update))
     loop.close()
     
