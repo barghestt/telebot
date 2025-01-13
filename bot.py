@@ -1,6 +1,6 @@
 from flask import Flask, request
 from telegram import Update, Bot
-from telegram.ext import Dispatcher, MessageHandler, Filters, CallbackContext
+from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
 import logging
 
 # Настройка логирования
@@ -9,8 +9,8 @@ logger = logging.getLogger(__name__)
 
 # Список запрещенных слов (матерные слова)
 bad_words = [
-    'матерное_слово_1',
-    'матерное_слово_2',
+    'хуй',
+    'говно',
     # Добавьте сюда все нужные слова
 ]
 
@@ -22,13 +22,13 @@ def contains_bad_words(text):
     return False
 
 # Обработчик входящих сообщений
-def filter_messages(update: Update, context: CallbackContext) -> None:
+async def filter_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.message
     text = message.text or message.caption
     
     if text and contains_bad_words(text):
-        message.reply_text("Пожалуйста, не используйте нецензурную лексику в этом канале.")
-        message.delete()
+        await message.reply_text("Пожалуйста, не используйте нецензурную лексику в этом канале.")
+        await message.delete()
 
 # Создаем Flask приложение
 app = Flask(__name__)
@@ -45,16 +45,15 @@ bot = Bot(TOKEN)
 def webhook():
     update = Update.de_json(request.get_json(force=True), bot)
     
-    # Создаем диспетчер и добавляем обработчик
-    dispatcher = Dispatcher(bot, None, workers=0, use_context=True)
-    dispatcher.add_handler(MessageHandler(Filters.text | Filters.caption, filter_messages))
+    # Создаем приложение и добавляем обработчик
+    application = ApplicationBuilder().token(TOKEN).build()
+    application.add_handler(MessageHandler(filters.TEXT | filters.CAPTION, filter_messages))
     
     # Обрабатываем обновление
-    dispatcher.process_update(update)
+    application.update_queue.put(update)
     
     return 'ok', 200
 
 if __name__ == '__main__':
     # Устанавливаем вебхук
-    bot.set_webhook(url=WEBHOOK_URL)
     app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
