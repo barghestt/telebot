@@ -10,11 +10,6 @@ from telegram.ext import (
     filters,
 )
 from uvicorn import run
-import logging
-
-# Настройка логирования
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Создаем FastAPI-приложение
 fastapi_app = FastAPI()
@@ -33,16 +28,10 @@ BAD_WORDS = [
 # Предкомпиляция регулярного выражения
 BAD_WORD_PATTERN = re.compile(r'\b(' + '|'.join(map(re.escape, BAD_WORDS)) + r')\b', re.IGNORECASE)
 
-# Проверка наличия необходимых переменных окружения
-if not (TOKEN := os.getenv("TELEGRAM_TOKEN")):
-    logger.error("Не найден TELEGRAM_TOKEN")
-    exit(1)
-
-if not (WEBHOOK_URL := os.getenv("WEB_URL")):
-    logger.error("Не найден WEB_URL")
-    exit(1)
-
 # Создаем Telegram приложение
+TOKEN = os.getenv("TELEGRAM_TOKEN")
+WEBHOOK_URL = os.getenv("WEB_URL")
+
 application = Application.builder().token(TOKEN).build()
 
 # Функция для обработки команды /start
@@ -53,26 +42,25 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 # Функция для проверки сообщений на наличие мата
 async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message_text = update.message.text.lower()
-    if BAD_WORD_PATTERN.search(message_text):
-        user = update.message.from_user
-        user_first_name = user.first_name
-        user_username = f"@{user.username}" if user.username else ""
-        
-        # Создаем ссылку на профиль пользователя через его user_id
-        user_profile_link = f"[{user_first_name}](tg://user?id={user.id})"
 
-        warning_message = f"{user_profile_link} {user_username}, пожалуйста, не используй мат!"
-        
+    if BAD_WORD_PATTERN.search(message_text):
+        user_first_name = update.message.from_user.first_name
+        user_username = f"@{update.message.from_user.username}" if update.message.from_user.username else ""
+        user_link = f"tg://user?id={update.message.from_user.id}"
+        # Если username есть, используем его, иначе добавляем ссылку
+        warning_message = (
+            f"{user_first_name} ({user_username})"
+            if user_username
+            else f"[{user_first_name}]({user_link})"
+        )
+        warning_message += ", пожалуйста, не используй мат!"
         await context.bot.send_message(
             chat_id=update.message.chat.id,
             text=warning_message,
-            parse_mode="Markdown",
+            parse_mode="MarkdownV2",  # Для обработки ссылок
             message_thread_id=update.message.message_thread_id
         )
-        try:
-            await update.message.delete()
-        except Exception as e:
-            logger.error(f"Ошибка при удалении сообщения: {e}")
+        await update.message.delete()
 
 # Добавляем обработчики
 application.add_handler(CommandHandler("start", start))
@@ -83,11 +71,15 @@ application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_me
 async def telegram_webhook(request: Request):
     """Обрабатываем запросы от Telegram"""
     try:
+        # Инициализируем приложение (гарантированно один раз)
+        await application.initialize()
+
+        # Обрабатываем обновления
         data = await request.json()
         update = Update.de_json(data, application.bot)
         await application.process_update(update)
     except Exception as e:
-        logger.error(f"Ошибка при обработке вебхука: {e}")
+        print(f"Ошибка при обработке вебхука: {e}")
 
 # Эндпоинт для проверки состояния
 @fastapi_app.get("/health")
@@ -97,6 +89,8 @@ def health_check():
 # Основная функция для запуска FastAPI
 if __name__ == "__main__":
     # Устанавливаем вебхук
+    import asyncio
     asyncio.run(application.bot.set_webhook(WEBHOOK_URL + "/webhook"))
+
     # Запускаем FastAPI
     run("bot:fastapi_app", host="0.0.0.0", port=int(os.getenv("PORT", 8443)), reload=True)
