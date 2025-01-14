@@ -44,23 +44,26 @@ async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     message_text = update.message.text.lower()
 
     if BAD_WORD_PATTERN.search(message_text):
+        # Получаем имя и фамилию пользователя
         user_first_name = update.message.from_user.first_name or "Пользователь"
-        user_username = f"@{update.message.from_user.username}" if update.message.from_user.username else ""
-        user_id = update.message.from_user.id
-        # Формируем ссылку без использования MarkdownV2
-        user_link = f"tg://user?id={user_id}"
-
-        # Сообщение о предупреждении
-        warning_message = (
-            f"{user_first_name} ({user_username}), пожалуйста, не используй мат!"
-            if user_username
-            else f"{user_first_name}, пожалуйста, не используй мат! Ссылка на профиль: {user_link}"
-        )
-
+        user_last_name = update.message.from_user.last_name or ""
+        full_name = f"{user_first_name} {user_last_name}".strip()  # Объединяем имя и фамилию
+        
+        # Формируем username или ссылку на профиль
+        user_username = update.message.from_user.username
+        if user_username:
+            user_info = f"{full_name} (@{user_username})"
+        else:
+            user_id = update.message.from_user.id
+            user_info = f"{full_name} (tg://user?id={user_id})"
+        
+        # Формируем предупреждающее сообщение
+        warning_message = f"{user_info}, пожалуйста, не используй мат!"
+        
         # Отправляем сообщение
         await context.bot.send_message(
             chat_id=update.message.chat.id,
-            text=warning_message,  # Простое сообщение без разметки
+            text=warning_message,  # Отправляем текст без форматирования
             message_thread_id=update.message.message_thread_id
         )
         await update.message.delete()
