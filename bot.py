@@ -39,40 +39,32 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_first_name = update.message.from_user.first_name
     await update.message.chat.send_message(f"Привет, {user_first_name}! Я ваш бот для проверки сообщений.")
     
-def escape_markdown_v2(text: str) -> str:
-    """Экранирует специальные символы для MarkdownV2."""
-    escape_chars = r"*_[]()~`>#+-=|{}.!"
-    return re.sub(f"([{re.escape(escape_chars)}])", r"\\\1", text)
-
 # Функция для проверки сообщений на наличие мата
 async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message_text = update.message.text.lower()
 
     if BAD_WORD_PATTERN.search(message_text):
-        # Экранируем имя пользователя
-        user_first_name = escape_markdown_v2(update.message.from_user.first_name or "Пользователь")
-        # Экранируем username, если он есть
-        user_username = f"@{escape_markdown_v2(update.message.from_user.username)}" if update.message.from_user.username else ""
-        # Формируем ссылку на профиль
+        user_first_name = update.message.from_user.first_name or "Пользователь"
+        user_username = f"@{update.message.from_user.username}" if update.message.from_user.username else ""
         user_id = update.message.from_user.id
-        user_link = f"[{user_first_name}](tg://user?id={user_id})"
-        
-        # Если username есть, добавляем его в сообщение
+        # Формируем ссылку без использования MarkdownV2
+        user_link = f"tg://user?id={user_id}"
+
+        # Сообщение о предупреждении
         warning_message = (
-            f"{user_first_name} ({user_username})"
+            f"{user_first_name} ({user_username}), пожалуйста, не используй мат!"
             if user_username
-            else user_link
+            else f"{user_first_name}, пожалуйста, не используй мат! Ссылка на профиль: {user_link}"
         )
-        warning_message += ", пожалуйста, не используй мат!"
-        
-        # Отправляем сообщение с экранированными данными
+
+        # Отправляем сообщение
         await context.bot.send_message(
             chat_id=update.message.chat.id,
-            text=warning_message,
-            parse_mode="MarkdownV2",  # Обязательно указываем MarkdownV2
+            text=warning_message,  # Простое сообщение без разметки
             message_thread_id=update.message.message_thread_id
         )
         await update.message.delete()
+
 
 # Добавляем обработчики
 application.add_handler(CommandHandler("start", start))
