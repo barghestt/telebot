@@ -38,22 +38,30 @@ application = Application.builder().token(TOKEN).build()
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_first_name = update.message.from_user.first_name
     await update.message.chat.send_message(f"Привет, {user_first_name}! Я ваш бот для проверки сообщений.")
-
+    
+def escape_markdown_v2(text: str) -> str:
+    """Экранирует специальные символы для MarkdownV2."""
+    escape_chars = r"*_[]()~`>#+-=|{}.!"
+    return re.sub(f"([{re.escape(escape_chars)}])", r"\\\1", text)
+    
 # Функция для проверки сообщений на наличие мата
 async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message_text = update.message.text.lower()
 
     if BAD_WORD_PATTERN.search(message_text):
-        user_first_name = update.message.from_user.first_name
-        user_username = f"@{update.message.from_user.username}" if update.message.from_user.username else ""
-        user_link = f"tg://user?id={update.message.from_user.id}"
+        user_first_name = escape_markdown_v2(update.message.from_user.first_name or "Пользователь")
+        user_username = f"@{escape_markdown_v2(update.message.from_user.username)}" if update.message.from_user.username else ""
+        user_id = update.message.from_user.id
+        user_link = f"[{user_first_name}](tg://user?id={user_id})"
+        
         # Если username есть, используем его, иначе добавляем ссылку
         warning_message = (
             f"{user_first_name} ({user_username})"
             if user_username
-            else f"[{user_first_name}]({user_link})"
+            else user_link
         )
         warning_message += ", пожалуйста, не используй мат!"
+        
         await context.bot.send_message(
             chat_id=update.message.chat.id,
             text=warning_message,
