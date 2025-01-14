@@ -43,18 +43,21 @@ def escape_markdown_v2(text: str) -> str:
     """Экранирует специальные символы для MarkdownV2."""
     escape_chars = r"*_[]()~`>#+-=|{}.!"
     return re.sub(f"([{re.escape(escape_chars)}])", r"\\\1", text)
-    
+
 # Функция для проверки сообщений на наличие мата
 async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message_text = update.message.text.lower()
 
     if BAD_WORD_PATTERN.search(message_text):
+        # Экранируем имя пользователя
         user_first_name = escape_markdown_v2(update.message.from_user.first_name or "Пользователь")
+        # Экранируем username, если он есть
         user_username = f"@{escape_markdown_v2(update.message.from_user.username)}" if update.message.from_user.username else ""
+        # Формируем ссылку на профиль
         user_id = update.message.from_user.id
         user_link = f"[{user_first_name}](tg://user?id={user_id})"
         
-        # Если username есть, используем его, иначе добавляем ссылку
+        # Если username есть, добавляем его в сообщение
         warning_message = (
             f"{user_first_name} ({user_username})"
             if user_username
@@ -62,10 +65,11 @@ async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         )
         warning_message += ", пожалуйста, не используй мат!"
         
+        # Отправляем сообщение с экранированными данными
         await context.bot.send_message(
             chat_id=update.message.chat.id,
             text=warning_message,
-            parse_mode="MarkdownV2",  # Для обработки ссылок
+            parse_mode="MarkdownV2",  # Обязательно указываем MarkdownV2
             message_thread_id=update.message.message_thread_id
         )
         await update.message.delete()
