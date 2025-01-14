@@ -1,84 +1,102 @@
-from flask import Flask, request, jsonify
-from telegram import Update, Bot
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
-import logging
-import threading
-import asyncio
 import os
+import re
+from fastapi import FastAPI, Request
+from telegram import Update
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    MessageHandler,
+    ContextTypes,
+    filters,
+)
+from uvicorn import run
+import logging
 
 # Настройка логирования
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Список запрещенных слов (матерные слова)
-bad_words = [
-    'хуй',
-    'говно',
-    # Добавьте сюда все нужные слова
+# Создаем FastAPI-приложение
+fastapi_app = FastAPI()
+
+# Список запрещённых слов
+BAD_WORDS = [
+    "хер", "урод", "сволочь", "дрянь", "ублюдок", "сучка", "падла",
+    "тварь", "шалава", "проститутка", "мудак", "гнида", "мразь",
+    "говнюк", "сука", "блядь", "бля", "блядский", "блядина", "блядовать",
+    "пизда", "пиздец", "пиздануть", "пиздатый", "пиздеть", "пиздёж", "пиздюк",
+    "ебать", "ебёт", "ебал", "ебанутая", "ебанутый", "ебануться", "ёб",
+    "пидор", "пидорас", "пидорок", "пидорюга", "пидорнуть", "пидорский",
+    "хуй", "хуета", "хуйня", "хули", "хуевый", "хуярить", "хуяк"
 ]
 
-# Функция для проверки наличия плохих слов в сообщении
-def contains_bad_words(text):
-    for word in bad_words:
-        if word in text.lower():
-            return True
-    return False
+# Предкомпиляция регулярного выражения
+BAD_WORD_PATTERN = re.compile(r'\b(' + '|'.join(map(re.escape, BAD_WORDS)) + r')\b', re.IGNORECASE)
 
-# Обработчик команды /start
+# Проверка наличия необходимых переменных окружения
+if not (TOKEN := os.getenv("TELEGRAM_TOKEN")):
+    logger.error("Не найден TELEGRAM_TOKEN")
+    exit(1)
+
+if not (WEBHOOK_URL := os.getenv("WEB_URL")):
+    logger.error("Не найден WEB_URL")
+    exit(1)
+
+# Создаем Telegram приложение
+application = Application.builder().token(TOKEN).build()
+
+# Функция для обработки команды /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user = update.message.from_user
-    logger.info("User %s started the conversation.", user.first_name)
-    await update.message.reply_text("Бот готов удалять матерные сообщения в вашем канале.")
+    user_first_name = update.message.from_user.first_name
+    await update.message.chat.send_message(f"Привет, {user_first_name}! Я ваш бот для проверки сообщений.")
 
-# Обработчик входящих сообщений
-async def filter_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    message = update.message
-    text = message.text or message.caption
-    
-    if text and contains_bad_words(text):
-        await message.reply_text("Пожалуйста, не используйте нецензурную лексику в этом канале.")
-        await message.delete()
+# Функция для проверки сообщений на наличие мата
+async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message_text = update.message.text.lower()
+    if BAD_WORD_PATTERN.search(message_text):
+        user = update.message.from_user
+        user_first_name = user.first_name
+        user_username = f"@{user.username}" if user.username else ""
+        
+        # Создаем ссылку на профиль пользователя через его user_id
+        user_profile_link = f"[{user_first_name}](tg://user?id={user.id})"
 
-# Создаем Flask приложение
-app = Flask(__name__)
+        warning_message = f"{user_profile_link} {user_username}, пожалуйста, не используй мат!"
+        
+        await context.bot.send_message(
+            chat_id=update.message.chat.id,
+            text=warning_message,
+            parse_mode="Markdown",
+            message_thread_id=update.message.message_thread_id
+        )
+        try:
+            await update.message.delete()
+        except Exception as e:
+            logger.error(f"Ошибка при удалении сообщения: {e}")
 
-# Замените 'YOUR_TOKEN' на ваш токен от BotFather
-TOKEN = os.getenv("TELEGRAM_TOKEN")
-
-# Замените 'YOUR_RENDER_URL' на ваш URL на Render
-WEBHOOK_URL = os.getenv("WEB_URL")
-
-bot = Bot(TOKEN)
-
-# Асинхронное приложение для обработки обновлений
-application = ApplicationBuilder().token(TOKEN).build()
+# Добавляем обработчики
 application.add_handler(CommandHandler("start", start))
-application.add_handler(MessageHandler(filters.TEXT | filters.CAPTION & (~filters.COMMAND), filter_messages))
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
 
-# Инициализация приложения
-async def initialize_application():
-    await application.initialize()
+# Создаем эндпоинт вебхука
+@fastapi_app.post("/webhook")
+async def telegram_webhook(request: Request):
+    """Обрабатываем запросы от Telegram"""
+    try:
+        data = await request.json()
+        update = Update.de_json(data, application.bot)
+        await application.process_update(update)
+    except Exception as e:
+        logger.error(f"Ошибка при обработке вебхука: {e}")
 
-# Функция для обработки обновлений в отдельном потоке
-async def process_update(update):
-    await application.process_update(update)
+# Эндпоинт для проверки состояния
+@fastapi_app.get("/health")
+def health_check():
+    return {"status": "ok"}
 
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    update = Update.de_json(request.get_json(force=True), bot)
-    
-    # Убедимся, что приложение инициализировано
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(initialize_application())
-    
-    # Обрабатываем обновление в отдельном потоке
-    loop.run_until_complete(process_update(update))
-    loop.close()
-    
-    return jsonify({"status": "ok"}), 200
-
-if __name__ == '__main__':
+# Основная функция для запуска FastAPI
+if __name__ == "__main__":
     # Устанавливаем вебхук
-    bot.set_webhook(url=WEBHOOK_URL)
-    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+    asyncio.run(application.bot.set_webhook(WEBHOOK_URL + "/webhook"))
+    # Запускаем FastAPI
+    run("bot:fastapi_app", host="0.0.0.0", port=int(os.getenv("PORT", 8443)), reload=True)
