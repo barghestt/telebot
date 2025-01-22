@@ -49,13 +49,14 @@ async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         user_last_name = update.message.from_user.last_name or ""
         full_name = f"{user_first_name} {user_last_name}".strip()  # Объединяем имя и фамилию
         
-        # Формируем username или ссылку на профиль
+        # Проверяем наличие username
         user_username = update.message.from_user.username
         if user_username:
             user_info = f"{full_name} (@{user_username})"
         else:
             user_id = update.message.from_user.id
-            user_info = f"{full_name} (tg://user?id={user_id})"
+            # Формируем HTML-ссылку
+            user_info = f"<a href='tg://user?id={user_id}'>{full_name}</a>"
         
         # Формируем предупреждающее сообщение
         warning_message = f"{user_info}, пожалуйста, не используй мат!"
@@ -63,7 +64,8 @@ async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         # Отправляем сообщение
         await context.bot.send_message(
             chat_id=update.message.chat.id,
-            text=warning_message,  # Отправляем текст без форматирования
+            text=warning_message,  # Текст с HTML-ссылкой
+            parse_mode="HTML",  # Указываем использование HTML
             message_thread_id=update.message.message_thread_id
         )
         await update.message.delete()
